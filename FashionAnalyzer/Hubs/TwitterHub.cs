@@ -15,6 +15,8 @@ namespace FashionAnalyzer.Hubs
         private ConcurrentDictionary<string, TwitterTaskData> CurrentTasks => _currentTasks ?? (_currentTasks = new ConcurrentDictionary<string, TwitterTaskData>());
         private readonly TwitterStream _twitterStream = new TwitterStream();
 
+        /// <summary> Starts the twitter live stream. </summary>
+        /// <returns></returns>
         public async Task StartTwitterLive()
         {
             var tokenSource = new CancellationTokenSource();
@@ -30,35 +32,15 @@ namespace FashionAnalyzer.Hubs
             await task;
         }
 
+        /// <summary> Stops the twitter stream with a specific task id.</summary>
+        /// <param name="taskId"> The task id. </param>
+        /// <returns></returns>
         public async Task StopTwitterLive(string taskId)
         {
             if (CurrentTasks.ContainsKey(taskId))
-            {
                 CurrentTasks[taskId].CancellationToken.Cancel();
-            }
+            
             await Clients.Caller.updateStatus("Stopped.");
         }
-
-
-        //public TwitterHub()
-        //{
-        //    //Create a task to update the clients every 3 seconds.
-        //   var taskTimer = Task.Factory.StartNew(async () =>
-        //   {
-        //       while (true)
-        //       {
-        //           string timeNow = DateTime.Now.ToString(CultureInfo.InvariantCulture);
-        //            // Send server time to all the connected clients on the client method: SendServerTime()
-        //            Clients.All.SendServerTime(timeNow);
-
-        //           await Task.Delay(500);
-        //       }
-        //   }, TaskCreationOptions.LongRunning);
-        //}
-
-        //public void Hello()
-        //{
-        //    Clients.All.hello();
-        //}
     }
 }

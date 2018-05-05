@@ -7,51 +7,65 @@ using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNet.SignalR;
 using Tweetinvi;
+using Tweetinvi.Core.Extensions;
+using Tweetinvi.Models;
 using Tweetinvi.Streaming;
 
 namespace FashionAnalyzer.Hubs
 {
     public class TwitterStream
     {
-        private ISampleStream _stream;
+        private IFilteredStream _stream;
         private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
 
         public async Task StartStream(CancellationToken token)
         {
-            // *poof*
+            /*poof*/
 
             if (_stream == null)
             {
-                //_stream = Stream.CreateUserStream();
-                _stream = Stream.CreateSampleStream();
+                _stream = Stream.CreateFilteredStream();
+                _stream.AddTrack("#face");
+                _stream.AddTrack("#ansikte");
 
-                // Other events can be used. This is just YOUR twitter feed.
-                _stream.TweetReceived += async (sender, args) =>
-                //_stream.TweetCreatedByAnyone += async (sender, args) =>
+                // Raised when any tweet that matches any condition.
+                _stream.MatchingTweetReceived += async (sender, args) =>
                 {
                     try
                     {
                         token.ThrowIfCancellationRequested();
                     }
-                    catch (OperationCanceledException e)
+                    catch (OperationCanceledException)
                     {
                         await _context.Clients.All.updateStatus("Stopped");
                         _stream.StopStream();
                     }
 
-                    var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
-                    await _context.Clients.All.updateTweet(embedTweet);
+                    ITweet tweet = args.Tweet;
+                    if (!tweet.InReplyToStatusId.HasValue && !tweet.IsRetweet)
+                    {
+                        var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
+                        await _context.Clients.All.updateTweet(embedTweet);
+                    }
                 };
 
                 // if anything changes the state, update the UI.
                 _stream.StreamPaused += async (sender, args) => { await _context.Clients.All.updateStatus("Paused."); };
                 _stream.StreamResumed += async (sender, args) => { await _context.Clients.All.updateStatus("Streaming..."); };
                 _stream.StreamStarted += async (sender, args) => { await _context.Clients.All.updateStatus("Started."); };
-                _stream.StreamStopped += async (sender, args) => { await _context.Clients.All.updateStatus("Stopped (event)"); };
+                _stream.StreamStopped += async (sender, args) =>
+                {
+                    string status = "Stopped";
+                    Exception e = args.Exception;
+                    if (e != null)
+                        status += ": " + e.Message;
+
+                    await _context.Clients.All.updateStatus(status);
+                };
 
                 // Start the stream.
                 await _context.Clients.All.updateStatus("Started.");
-                await _stream.StartStreamAsync();
+                await _stream.StartStreamMatchingAnyConditionAsync();
             }
 
             // This condition will never be taken.
