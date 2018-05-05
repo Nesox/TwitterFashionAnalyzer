@@ -13,6 +13,7 @@ namespace FashionAnalyzer.Hubs
     {
         private static ConcurrentDictionary<string, TwitterTaskData> _currentTasks;
         private ConcurrentDictionary<string, TwitterTaskData> CurrentTasks => _currentTasks ?? (_currentTasks = new ConcurrentDictionary<string, TwitterTaskData>());
+        private readonly TwitterStream _twitterStream = new TwitterStream();
 
         public async Task StartTwitterLive()
         {
@@ -25,7 +26,7 @@ namespace FashionAnalyzer.Hubs
                 Status = "Started."
             });
             await Clients.Caller.setTaskId(taskId);
-            var task = TwitterStream.StartStream(tokenSource.Token);
+            var task = _twitterStream.StartStream(tokenSource.Token);
             await task;
         }
 

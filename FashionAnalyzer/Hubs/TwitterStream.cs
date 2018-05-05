@@ -11,19 +11,14 @@ using Tweetinvi.Streaming;
 
 namespace FashionAnalyzer.Hubs
 {
-    public static class TwitterStream
+    public class TwitterStream
     {
-        private static ISampleStream _stream;
-        private static readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
+        private ISampleStream _stream;
+        private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
 
-        public static async Task StartStream(CancellationToken token)
+        public async Task StartStream(CancellationToken token)
         {
-            Auth.SetUserCredentials(
-                "ao1UgCEX8ZVXauXUy7TQTll5X",                            // Consumer Key (API Key)
-                "XxbPYV8N9nDrEaHyiNaxhOd3G7UHIJ1wEErlzoO0h7dVZ3V3ky",   // Consumer Secret (API Secret)
-                "2260832391-euGoNd5qC9VC7T0NIQPLFnaRNC6tETcQ386abXx",   // Access Token
-                "6DFkaFAkYmVY2MM7su7FsOt2CaKaq3bQXODtw9zVscNce"         // Access Token Secret
-                );
+            // *poof*
 
             if (_stream == null)
             {
@@ -34,15 +29,17 @@ namespace FashionAnalyzer.Hubs
                 _stream.TweetReceived += async (sender, args) =>
                 //_stream.TweetCreatedByAnyone += async (sender, args) =>
                 {
-                    if (token.IsCancellationRequested)
+                    try
                     {
+                        token.ThrowIfCancellationRequested();
+                    }
+                    catch (OperationCanceledException e)
+                    {
+                        await _context.Clients.All.updateStatus("Stopped");
                         _stream.StopStream();
-                        //token.ThrowIfCancellationRequested();
                     }
 
-                    // use the embeded tweets from tweetinvi.
                     var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
-
                     await _context.Clients.All.updateTweet(embedTweet);
                 };
 
@@ -53,17 +50,15 @@ namespace FashionAnalyzer.Hubs
                 _stream.StreamStopped += async (sender, args) => { await _context.Clients.All.updateStatus("Stopped (event)"); };
 
                 // Start the stream.
+                await _context.Clients.All.updateStatus("Started.");
                 await _stream.StartStreamAsync();
             }
+
+            // This condition will never be taken.
             else
             {
                 _stream.ResumeStream();
             }
-
-            await _context.Clients.All.updateStatus("Started.");
         }
-
-
-
     }
 }
