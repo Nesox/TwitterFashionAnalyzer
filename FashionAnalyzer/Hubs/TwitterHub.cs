@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNet.SignalR;
@@ -37,10 +36,13 @@ namespace FashionAnalyzer.Hubs
         /// <returns></returns>
         public async Task StopTwitterLive(string taskId)
         {
-            if (CurrentTasks.ContainsKey(taskId))
-                CurrentTasks[taskId].CancellationToken.Cancel();
-            
-            await Clients.Caller.updateStatus("Stopped.");
+            if (!string.IsNullOrWhiteSpace(taskId))
+            {
+                if (CurrentTasks.ContainsKey(taskId))
+                    CurrentTasks[taskId].CancellationToken.Cancel();
+
+                await Clients.Caller.updateStatus("Stopped.");
+            }
         }
     }
 }

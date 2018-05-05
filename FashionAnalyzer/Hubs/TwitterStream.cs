@@ -5,7 +5,10 @@ using System.Runtime.Remoting.Channels;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNet.Identity;
+using Microsoft.AspNet.Identity.Owin;
 using Microsoft.AspNet.SignalR;
+using Microsoft.Owin.Security.Twitter;
 using Tweetinvi;
 using Tweetinvi.Core.Extensions;
 using Tweetinvi.Models;
@@ -17,16 +20,28 @@ namespace FashionAnalyzer.Hubs
     {
         private IFilteredStream _stream;
         private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
-
+        
         public async Task StartStream(CancellationToken token)
         {
-            /*poof*/
+            if (Auth.Credentials == null)
+            {
+                //var twitterTokenClaim = TwitterAuthContext.Identity.Claims.FirstOrDefault(m => m.Type.EndsWith("twitter:access_token"));
+                //var twitterSecretClaim = TwitterAuthContext.Identity.Claims.FirstOrDefault(m => m.Type.EndsWith("twitter:access_token_secret"));
+
+                Auth.SetUserCredentials(
+                    "",                             // Consumer Key (API Key)
+                    "",                             // Consumer Secret (API Secret)   
+                    "",                             // Access Token
+                    ""                              // Access Token Secret
+                );
+            }
 
             if (_stream == null)
             {
                 _stream = Stream.CreateFilteredStream();
-                _stream.AddTrack("#face");
-                _stream.AddTrack("#ansikte");
+                //_stream.AddTrack("#face");
+                //_stream.AddTrack("#ansikte");
+                _stream.AddTrack("#workout");
 
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>

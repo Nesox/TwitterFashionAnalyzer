@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using FashionAnalyzer.Hubs;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin;
@@ -6,6 +9,8 @@ using Microsoft.Owin.Security.Cookies;
 using Microsoft.Owin.Security.Google;
 using Owin;
 using FashionAnalyzer.Models;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Twitter;
 
 namespace FashionAnalyzer
 {
@@ -45,15 +50,11 @@ namespace FashionAnalyzer
             // This is similar to the RememberMe option when you log in.
             app.UseTwoFactorRememberBrowserCookie(DefaultAuthenticationTypes.TwoFactorRememberBrowserCookie);
 
-            
+
             // Uncomment the following lines to enable logging in with third party login providers
             //app.UseMicrosoftAccountAuthentication(
             //    clientId: "",
             //    clientSecret: "");
-
-            //app.UseTwitterAuthentication(
-            //   consumerKey: "",
-            //   consumerSecret: "");
 
             //app.UseFacebookAuthentication(
             //   appId: "",
@@ -64,6 +65,25 @@ namespace FashionAnalyzer
             //    ClientId = "",
             //    ClientSecret = ""
             //});
+
+            var twitterOptions = new TwitterAuthenticationOptions
+            {
+                ConsumerKey = "",
+                ConsumerSecret = "",
+
+                Provider = new TwitterAuthenticationProvider
+                {
+                    OnAuthenticated = (context) =>
+                    {
+                        // Store the access token and token secret so we can use them later when setting up the twitter stream.
+                        // Todo: Store in a database per user.
+                        context.Identity.AddClaim(new Claim("urn:twitter:access_token", context.AccessToken, "XmlSchemaString", "Twitter"));
+                        context.Identity.AddClaim(new Claim("urn:twitter:access_token_secret", context.AccessTokenSecret, "XmlSchemaString", "Twitter"));
+                        return Task.FromResult(0);
+                    }
+                }
+            };
+            app.UseTwitterAuthentication(twitterOptions);
         }
     }
 }
