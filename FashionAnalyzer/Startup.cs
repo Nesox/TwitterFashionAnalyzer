@@ -8,6 +8,9 @@ namespace FashionAnalyzer
     {
         public void Configuration(IAppBuilder app)
         {
+            // Enables SignalR
+            app.MapSignalR();
+
             ConfigureAuth(app);
         }
     }
