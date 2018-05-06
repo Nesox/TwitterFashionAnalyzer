@@ -8,6 +8,7 @@ using System.Web;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.AspNet.SignalR;
+using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.Owin.Security.Twitter;
 using Tweetinvi;
 using Tweetinvi.Core.Extensions;
@@ -34,11 +35,12 @@ namespace FashionAnalyzer.Hubs
             return Task.FromResult(0);
         }
 
-        public async Task StartStream(CancellationToken token)
+        public async Task StartStream(CancellationToken token, string connectionId)
         {
+            var client = _context.Clients.Client(connectionId);
             if (Auth.Credentials == null)
             {
-                await _context.Clients.All.updateStatus("Please login with Twitter first");
+                await client.updateStatus("Please login with Twitter first");
                 return;
             }
 
@@ -58,7 +60,7 @@ namespace FashionAnalyzer.Hubs
                     }
                     catch (OperationCanceledException)
                     {
-                        await _context.Clients.All.updateStatus("Stopped");
+                        await client.updateStatus("Stopped");
                         _stream.StopStream();
                     }
 
@@ -66,14 +68,14 @@ namespace FashionAnalyzer.Hubs
                     if (!tweet.InReplyToStatusId.HasValue && !tweet.IsRetweet)
                     {
                         var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
-                        await _context.Clients.All.updateTweet(embedTweet);
+                        await client.updateTweet(embedTweet);
                     }
                 };
 
                 // if anything changes the state, update the UI.
-                _stream.StreamPaused += async (sender, args) => { await _context.Clients.All.updateStatus("Paused."); };
-                _stream.StreamResumed += async (sender, args) => { await _context.Clients.All.updateStatus("Streaming..."); };
-                _stream.StreamStarted += async (sender, args) => { await _context.Clients.All.updateStatus("Started."); };
+                _stream.StreamPaused += async (sender, args) => { await client.updateStatus("Paused."); };
+                _stream.StreamResumed += async (sender, args) => { await client.updateStatus("Streaming..."); };
+                _stream.StreamStarted += async (sender, args) => { await client.updateStatus("Started."); };
                 _stream.StreamStopped += async (sender, args) =>
                 {
                     string status = "Stopped";
@@ -81,11 +83,11 @@ namespace FashionAnalyzer.Hubs
                     if (e != null)
                         status += ": " + e.Message;
 
-                    await _context.Clients.All.updateStatus(status);
+                    await client.updateStatus(status);
                 };
 
                 // Start the stream.
-                await _context.Clients.All.updateStatus("Started.");
+                await client.updateStatus("Started.");
                 await _stream.StartStreamMatchingAnyConditionAsync();
             }
 

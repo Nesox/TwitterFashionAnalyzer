@@ -26,8 +26,11 @@ namespace FashionAnalyzer.Hubs
                 Id = taskId,
                 Status = "Started."
             });
+
             await Clients.Caller.setTaskId(taskId);
-            var task = _twitterStream.StartStream(tokenSource.Token);
+            string connectionId = Context.ConnectionId;
+
+            var task = _twitterStream.StartStream(tokenSource.Token, connectionId);
             await task;
         }
 
