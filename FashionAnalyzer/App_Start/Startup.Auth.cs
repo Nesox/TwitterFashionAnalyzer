@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using FashionAnalyzer.Hubs;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin;
 using Microsoft.Owin.Security.Cookies;
-using Microsoft.Owin.Security.Google;
 using Owin;
 using FashionAnalyzer.Models;
-using Microsoft.Owin.Security;
 using Microsoft.Owin.Security.Twitter;
 
 namespace FashionAnalyzer
@@ -68,19 +64,12 @@ namespace FashionAnalyzer
 
             var twitterOptions = new TwitterAuthenticationOptions
             {
-                ConsumerKey = "",
-                ConsumerSecret = "",
+                ConsumerKey = "LKosIpik4NUFyQVr4BzY1nW7e",
+                ConsumerSecret = "YEWGZL3Fwi1jmEi6TQdntVOMArf5ERJkAcHSAri0gKEOyE0Wv3",
 
                 Provider = new TwitterAuthenticationProvider
                 {
-                    OnAuthenticated = (context) =>
-                    {
-                        // Store the access token and token secret so we can use them later when setting up the twitter stream.
-                        // Todo: Store in a database per user.
-                        context.Identity.AddClaim(new Claim("urn:twitter:access_token", context.AccessToken, "XmlSchemaString", "Twitter"));
-                        context.Identity.AddClaim(new Claim("urn:twitter:access_token_secret", context.AccessTokenSecret, "XmlSchemaString", "Twitter"));
-                        return Task.FromResult(0);
-                    }
+                  OnAuthenticated = TwitterStream.OnAuthenticated
                 }
             };
             app.UseTwitterAuthentication(twitterOptions);
