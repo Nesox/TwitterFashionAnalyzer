@@ -1,0 +1,15 @@
+﻿using System.Threading;
+using Newtonsoft.Json;
+using Tweetinvi.Models;
+
+namespace FashionAnalyzer.Hubs
+{
+    public class TwitterTaskData
+    {
+        public string Id { get; set; }
+        public string Status { get; set; }
+        public IOEmbedTweet Tweet { get; set; }
+        [JsonIgnore]
+        public CancellationTokenSource CancellationToken { get; set; }
+    }
+}
