@@ -47,25 +47,10 @@ namespace FashionAnalyzer
             app.UseTwoFactorRememberBrowserCookie(DefaultAuthenticationTypes.TwoFactorRememberBrowserCookie);
 
 
-            // Uncomment the following lines to enable logging in with third party login providers
-            //app.UseMicrosoftAccountAuthentication(
-            //    clientId: "",
-            //    clientSecret: "");
-
-            //app.UseFacebookAuthentication(
-            //   appId: "",
-            //   appSecret: "");
-
-            //app.UseGoogleAuthentication(new GoogleOAuth2AuthenticationOptions()
-            //{
-            //    ClientId = "",
-            //    ClientSecret = ""
-            //});
-
             var twitterOptions = new TwitterAuthenticationOptions
             {
-                ConsumerKey = "LKosIpik4NUFyQVr4BzY1nW7e",
-                ConsumerSecret = "YEWGZL3Fwi1jmEi6TQdntVOMArf5ERJkAcHSAri0gKEOyE0Wv3",
+                ConsumerKey = "",
+                ConsumerSecret = "",
 
                 Provider = new TwitterAuthenticationProvider
                 {

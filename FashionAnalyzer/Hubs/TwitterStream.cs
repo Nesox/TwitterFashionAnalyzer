@@ -2,17 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting.Channels;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
+using FashionAnalyzer.FaceDetection;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
 using Microsoft.Owin.Security.Twitter;
+using Microsoft.ProjectOxford.Face.Contract;
 using Tweetinvi;
 using Tweetinvi.Core.Extensions;
 using Tweetinvi.Models;
+using Tweetinvi.Models.Entities;
 using Tweetinvi.Streaming;
 
 namespace FashionAnalyzer.Hubs
@@ -21,13 +25,14 @@ namespace FashionAnalyzer.Hubs
     {
         private IFilteredStream _stream;
         private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
+        private readonly HashSet<string> _processedImages = new HashSet<string>();
 
         internal static Task OnAuthenticated(TwitterAuthenticatedContext twitterAuthenticatedContext)
         {
             // Use the access token and secret from the twitter login.
             Auth.SetUserCredentials(
-                "LKosIpik4NUFyQVr4BzY1nW7e",                            // Consumer Key (API Key)
-                "YEWGZL3Fwi1jmEi6TQdntVOMArf5ERJkAcHSAri0gKEOyE0Wv3",   // Consumer Secret (API Secret)   
+                "",                                                     // Consumer Key (API Key)
+                "",                                                     // Consumer Secret (API Secret)   
                 twitterAuthenticatedContext.AccessToken,                // Access Token
                 twitterAuthenticatedContext.AccessTokenSecret           // Access Token Secret
             );
@@ -47,9 +52,10 @@ namespace FashionAnalyzer.Hubs
             if (_stream == null)
             {
                 _stream = Stream.CreateFilteredStream();
-                _stream.AddTrack("#face");
-                _stream.AddTrack("#ansikte");
+                //_stream.AddTrack("#face");
+                //_stream.AddTrack("#ansikte");
                 //_stream.AddTrack("#workout");
+                 _stream.AddTrack("#facetestdebug");
 
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>
@@ -64,12 +70,36 @@ namespace FashionAnalyzer.Hubs
                         _stream.StopStream();
                     }
 
+                    bool showTweet = false;
                     ITweet tweet = args.Tweet;
-                    if (!tweet.InReplyToStatusId.HasValue && !tweet.IsRetweet)
+                    if (tweet.Media != null)
                     {
-                        var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
-                        await client.updateTweet(embedTweet);
+                        foreach (IMediaEntity mediaEntity in tweet.Media)
+                        {
+                            if (mediaEntity.MediaType == "photo")
+                            {
+                                string mediaUrl = mediaEntity.MediaURL;
+                                if (!_processedImages.Contains(mediaUrl))
+                                {
+                                    showTweet = true;
+                                    _processedImages.Add(mediaUrl);
+                                    Face[] faces = await FaceDetectionClient.DetectFaceAndAttributes(mediaUrl);
+
+                                    string html;
+                                    if (TryGenerateHtmlForProcessedImage(faces, mediaUrl, out html))
+                                    {
+                                        await client.updateTweetHtml(html);
+                                    }
+                                }
+                            }
+                        }
                     }
+
+                    //if (showTweet)
+                    //{ 
+                    //    var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
+                    //    await client.updateTweet(embedTweet);
+                    //}
                 };
 
                 // if anything changes the state, update the UI.
@@ -96,6 +126,30 @@ namespace FashionAnalyzer.Hubs
             {
                 _stream.ResumeStream();
             }
+        }
+
+        private bool TryGenerateHtmlForProcessedImage(Face[] faces, string mediaUrl, out string html)
+        {
+            int numFace = faces.Length;
+            if (numFace == 0)
+            {
+                html = "";
+                return false;
+
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("<div class=\"col-sm-4\">");
+            sb.AppendLine($"<img src=\"{mediaUrl}\" class=\"img-responsive img-rounded\" style=\"max-width: 400px;\">");
+
+            foreach (Face f in faces)
+            {
+                // Face info
+                sb.AppendFormat("<p>Age: {0}, Gender: {1}, </p>\n", f.FaceAttributes.Age, f.FaceAttributes.Gender);
+            }
+            sb.AppendLine("</div>");
+
+            html = sb.ToString();
+            return true;
         }
     }
 }

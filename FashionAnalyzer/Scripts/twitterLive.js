@@ -2,11 +2,15 @@
 
     var twitterHub = $.connection.twitterHub;
     twitterHub.client.setTaskId = function (id) {
-        $("#firehoseOff").attr("data-id", id);
+        $("#stopStream").attr("data-id", id);
     }
 
+    $("#startStream").on("click", function () {
+        twitterHub.server.startTwitterLive();
+    });
+
     twitterHub.client.updateStatus = function (status) {
-        $("#firehoseStatus").html(status);
+        $("#streamStatus").html(status);
     }
 
     twitterHub.client.updateTweet = function (tweet) {
@@ -16,11 +20,16 @@
             .fadeIn("slow");
     };
 
-    $("#firehoseOn").on("click", function () {
-        twitterHub.server.startTwitterLive();
-    });
+    twitterHub.client.updateTweetHtml = function (html) {
+        $(html)
+            .hide()
+            .prependTo(".tweets")
+            .fadeIn("slow");
+    };
 
-    $("#firehoseOff").on("click", function () {
+
+
+    $("#stopStream").on("click", function () {
         var id = $(this).attr("data-id");
         twitterHub.server.stopTwitterLive(id);
     });
