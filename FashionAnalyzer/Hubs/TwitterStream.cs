@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Remoting.Channels;
@@ -24,8 +24,23 @@ namespace FashionAnalyzer.Hubs
     public class TwitterStream
     {
         private IFilteredStream _stream;
-        private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
+        //private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
         private readonly HashSet<string> _processedImages = new HashSet<string>();
+
+        #region Singleton
+
+        private static readonly Lazy<TwitterStream> _instance = new Lazy<TwitterStream>(
+        () => new TwitterStream(GlobalHost.ConnectionManager.GetHubContext<TwitterHub>()));
+
+        public static TwitterStream Instance => _instance.Value;
+
+        #endregion
+
+        private readonly IHubContext _context;
+        private TwitterStream(IHubContext context)
+        {
+            _context = context;
+        }
 
         internal static Task OnAuthenticated(TwitterAuthenticatedContext twitterAuthenticatedContext)
         {
@@ -40,6 +55,27 @@ namespace FashionAnalyzer.Hubs
             return Task.FromResult(0);
         }
 
+        private readonly HashSet<string> _trackingTags = new HashSet<string>();
+
+        public async Task UpdateFilters(string filterQuery, string connectionId)
+        {
+            var client = _context.Clients.Client(connectionId);
+            
+            string[] filters = filterQuery.Split('#');
+            if (filters.Length == 0)
+            {
+                await client.UpdateStatus("Invalid filter!");
+                return;
+            }
+            
+            _trackingTags.Clear();
+            foreach (string s in filters)
+            {
+                if (!string.IsNullOrWhiteSpace(s))
+                    _trackingTags.Add($"#{s}");
+            }
+        }
+
         public async Task StartStream(CancellationToken token, string connectionId)
         {
             var client = _context.Clients.Client(connectionId);
@@ -52,10 +88,17 @@ namespace FashionAnalyzer.Hubs
             if (_stream == null)
             {
                 _stream = Stream.CreateFilteredStream();
-                //_stream.AddTrack("#face");
-                //_stream.AddTrack("#ansikte");
-                //_stream.AddTrack("#workout");
-                 _stream.AddTrack("#facetestdebug");
+
+                if (_trackingTags.Count == 0)
+                {
+                    await client.updateStatus("Please add at least one tracking tag!");
+                    return;
+                }
+
+                // The stream won't start unless there's at least one track record.
+                // Add all the hashtags we want to track.
+                foreach (string s in _trackingTags)
+                    _stream.AddTrack(s);
 
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>
@@ -70,7 +113,7 @@ namespace FashionAnalyzer.Hubs
                         _stream.StopStream();
                     }
 
-                    bool showTweet = false;
+                    //bool showTweet = false;
                     ITweet tweet = args.Tweet;
                     if (tweet.Media != null)
                     {
@@ -81,7 +124,7 @@ namespace FashionAnalyzer.Hubs
                                 string mediaUrl = mediaEntity.MediaURL;
                                 if (!_processedImages.Contains(mediaUrl))
                                 {
-                                    showTweet = true;
+                                    //showTweet = true;
                                     _processedImages.Add(mediaUrl);
                                     Face[] faces = await FaceDetectionClient.DetectFaceAndAttributes(mediaUrl);
 
@@ -111,7 +154,9 @@ namespace FashionAnalyzer.Hubs
                     string status = "Stopped";
                     Exception e = args.Exception;
                     if (e != null)
+                    {
                         status += ": " + e.Message;
+                    }
 
                     await client.updateStatus(status);
                 };
@@ -120,14 +165,21 @@ namespace FashionAnalyzer.Hubs
                 await client.updateStatus("Started.");
                 await _stream.StartStreamMatchingAnyConditionAsync();
             }
-
-            // This condition will never be taken.
             else
             {
-                _stream.ResumeStream();
+                StreamState state = _stream.StreamState;
+                switch (state)
+                {
+                    case StreamState.Pause:
+                        _stream.ResumeStream();
+                        break;
+                    case StreamState.Stop:
+                        await _stream.StartStreamMatchingAnyConditionAsync();
+                        break;
+                }
             }
         }
-
+        
         private bool TryGenerateHtmlForProcessedImage(Face[] faces, string mediaUrl, out string html)
         {
             int numFace = faces.Length;
@@ -153,3 +205,4 @@ namespace FashionAnalyzer.Hubs
         }
     }
 }
+ 

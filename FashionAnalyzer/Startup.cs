@@ -1,4 +1,5 @@
-﻿using Microsoft.Owin;
+﻿using Microsoft.AspNet.SignalR;
+using Microsoft.Owin;
 using Owin;
 
 [assembly: OwinStartupAttribute(typeof(FashionAnalyzer.Startup))]
@@ -9,9 +10,16 @@ namespace FashionAnalyzer
         public void Configuration(IAppBuilder app)
         {
             // Enables SignalR
-            app.MapSignalR();
+            app.MapSignalR(
+#if DEBUG                
+                new HubConfiguration{
+                    EnableDetailedErrors = true,
 
-            ConfigureAuth(app);
+                }
+#endif
+        );
+
+        ConfigureAuth(app);
         }
     }
 }

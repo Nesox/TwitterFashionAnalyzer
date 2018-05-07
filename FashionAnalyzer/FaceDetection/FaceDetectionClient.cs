@@ -11,10 +11,6 @@ namespace FashionAnalyzer.FaceDetection
     public static class FaceDetectionClient
     {
         private static readonly IFaceServiceClient _faceServiceClient;
-        
-        //private Face[] _detectedFaces;                   // The list of detected faces.
-        //private String[] _faceDescriptions;      // The list of descriptions for the detected faces.
-        //private double _resizeFactor;            // The resize factor for the displayed image.
 
         static FaceDetectionClient()
         {

@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewBag.Title = "Home Page";
 }
 <p>&nbsp;</p>
@@ -8,7 +8,14 @@
     <p class="lead">Twitter Fashion Analyzer is an online tool for listening to tweets with specific hashtags, once a tweet has been made if it contains a picture it's passed to Azure's Face Api to determine if there is and how many faces there are in a picture and the age and gender.</p>
 </div>
 
+<div class="form-group">
+    <label>Hashtag filter:</label>
+    <input id="inpHashtagFilter" type="text" class="form-control">
+    <button id="btnUpdateFilter" type="button" class="btn btn-primary btn-md">Update</button>
+</div>
+
 <span id="streamStatus" class="label label-success"></span>
+
 <div class="btn-group">
     <button id="startStream" class="btn btn-success">
         <span class="glyphicon glyphicon-play"></span> Start Stream
