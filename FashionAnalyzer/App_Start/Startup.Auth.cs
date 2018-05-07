@@ -54,7 +54,7 @@ namespace FashionAnalyzer
 
                 Provider = new TwitterAuthenticationProvider
                 {
-                  OnAuthenticated = TwitterStream.OnAuthenticated
+                    OnAuthenticated = TwitterStream.OnAuthenticated
                 }
             };
             app.UseTwitterAuthentication(twitterOptions);

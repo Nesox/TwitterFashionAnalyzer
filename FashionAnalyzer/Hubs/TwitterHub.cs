@@ -12,7 +12,7 @@ namespace FashionAnalyzer.Hubs
     {
         private static ConcurrentDictionary<string, TwitterTaskData> _currentTasks;
         private ConcurrentDictionary<string, TwitterTaskData> CurrentTasks => _currentTasks ?? (_currentTasks = new ConcurrentDictionary<string, TwitterTaskData>());
-        private readonly TwitterStream _twitterStream = new TwitterStream();
+        //private readonly TwitterStream _twitterStream = new TwitterStream();
 
         /// <summary> Starts the twitter live stream. </summary>
         /// <returns></returns>
@@ -30,7 +30,7 @@ namespace FashionAnalyzer.Hubs
             await Clients.Caller.setTaskId(taskId);
             string connectionId = Context.ConnectionId;
 
-            var task = _twitterStream.StartStream(tokenSource.Token, connectionId);
+            var task = TwitterStream.Instance.StartStream(tokenSource.Token, connectionId);
             await task;
         }
 
@@ -46,6 +46,13 @@ namespace FashionAnalyzer.Hubs
 
                 await Clients.Caller.updateStatus("Stopped.");
             }
+        }
+
+        public async Task UpdateFilters(string newFilter)
+        {
+            string connectionId = Context.ConnectionId;
+            var task = TwitterStream.Instance.UpdateFilters(newFilter, connectionId);
+            await task;
         }
     }
 }

@@ -5,20 +5,25 @@
         $("#stopStream").attr("data-id", id);
     }
 
+    $("#btnUpdateFilter").on("click",
+        function() {
+            var filter = $('#inpHashtagFilter').val();
+            alert(filter);
+            twitterHub.server.updateFilters(filter);
+        });
+    
     $("#startStream").on("click", function () {
         twitterHub.server.startTwitterLive();
+    });
+
+    $("#stopStream").on("click", function () {
+        var id = $(this).attr("data-id");
+        twitterHub.server.stopTwitterLive(id);
     });
 
     twitterHub.client.updateStatus = function (status) {
         $("#streamStatus").html(status);
     }
-
-    twitterHub.client.updateTweet = function (tweet) {
-        $(tweet.HTML)
-            .hide()
-            .prependTo(".tweets")
-            .fadeIn("slow");
-    };
 
     twitterHub.client.updateTweetHtml = function (html) {
         $(html)
@@ -26,13 +31,6 @@
             .prependTo(".tweets")
             .fadeIn("slow");
     };
-
-
-
-    $("#stopStream").on("click", function () {
-        var id = $(this).attr("data-id");
-        twitterHub.server.stopTwitterLive(id);
-    });
 
     $.connection.hub.start();
 });
