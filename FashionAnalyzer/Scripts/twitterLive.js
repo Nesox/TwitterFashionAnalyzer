@@ -1,4 +1,4 @@
-﻿$(function () {
+$(function () {
 
     var twitterHub = $.connection.twitterHub;
     twitterHub.client.setTaskId = function (id) {
