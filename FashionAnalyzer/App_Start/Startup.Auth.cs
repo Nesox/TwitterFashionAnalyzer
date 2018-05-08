@@ -49,8 +49,8 @@ namespace FashionAnalyzer
 
             var twitterOptions = new TwitterAuthenticationOptions
             {
-                ConsumerKey = "",
-                ConsumerSecret = "",
+                ConsumerKey = APIKeys.TwitterConsumerKey,
+                ConsumerSecret = APIKeys.TwitterConsumerKeySecret,
 
                 Provider = new TwitterAuthenticationProvider
                 {

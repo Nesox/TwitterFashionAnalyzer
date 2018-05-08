@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
 
@@ -14,12 +11,13 @@ namespace FashionAnalyzer.FaceDetection
 
         static FaceDetectionClient()
         {
-            _faceServiceClient = new FaceServiceClient("", "https://westeurope.api.cognitive.microsoft.com/face/v1.0");
+            _faceServiceClient = new FaceServiceClient(APIKeys.AzureFaceApiKey,
+                "https://westeurope.api.cognitive.microsoft.com/face/v1.0");
         }
 
         public static async Task<Face[]> DetectFaceAndAttributes(string imageUrl)
         {
-            IEnumerable<FaceAttributeType> faceAttributes = new []
+            IEnumerable<FaceAttributeType> faceAttributes = new[]
             {
                 FaceAttributeType.Gender,
                 FaceAttributeType.Age,
@@ -34,10 +32,30 @@ namespace FashionAnalyzer.FaceDetection
                 Face[] faces = await _faceServiceClient.DetectAsync(imageUrl, returnFaceAttributes: faceAttributes);
                 return faces;
             }
+            // Only happens if we get rate limited, more than 100 faces per second or so.
             catch (FaceAPIException e)
             {
                 return null;
             }
+        }
+    }
+
+    public static class FaceExtensions
+    {
+        /// <summary> Determines if this face is a male. </summary>
+        /// <param name="face"></param>
+        /// <returns></returns>
+        public static bool IsMale(this Face face)
+        {
+            return face != null && face.FaceAttributes.Gender == "male";
+        }
+
+        /// <summary> Determines if this face is female. </summary>
+        /// <param name="face"></param>
+        /// <returns></returns>
+        public static bool IsFemale(this Face face)
+        {
+            return face != null && face.FaceAttributes.Gender == "female";
         }
     }
 }
