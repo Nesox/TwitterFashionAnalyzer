@@ -6814,3 +6814,30 @@ td.visible-print {
     display: none !important;
   }
 }
+
+/*Masonry support*/
+div#tweet-container {
+    display: -ms-flexbox;
+    -ms-flex-direction: column;
+    -ms-flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    height: 100vw;
+    font-size: 0;
+}
+
+    div#tweet-container div {
+        width: 33.3%;
+        transition: .8s opacity;
+    }
+
+    div#tweet-container:hover div {
+        opacity: 0.3;
+    }
+
+
+        div#tweet-container:hover div:hover {
+            opacity: 1;
+        }
+

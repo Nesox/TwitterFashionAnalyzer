@@ -16,7 +16,16 @@
 
 </div>
 
-<span id="streamStatus" class="label label-success"></span>
+<div class="container">
+    <dl>
+        <dt>Status</dt>
+        <dd id="streamStatus"></dd>
+        <dt>Stats</dt>
+        <dd id="streamStats"></dd>
+    </dl>
+</div>
+
+@*<span id="streamStatus" class="label label-success"></span>*@
 
 <div class="btn-group">
     <button id="startStream" class="btn btn-success">
@@ -27,18 +36,19 @@
     </button>
 </div>
 
-<div class="container-fluid">
-    <div id="tweet-container" class="row tweets">
+<!-- Container for all the processed images -->
 
-    </div>
+<div id="tweet-container" class="row tweets">
+
 </div>
 
+
+    
 @section scripts
 {
-    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
-    <script src="~/Scripts/jquery.signalR-2.2.3.min.js"></script>
-    <script src="~/Scripts/bootstrap.min.js"></script>
-    <script src="/signalr/hubs"></script>
-    <script src="~/Scripts/twitterLive.js"></script>
-}
-
+        <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+        <script src="~/Scripts/jquery.signalR-2.2.3.min.js"></script>
+        <script src="~/Scripts/bootstrap.min.js"></script>
+        <script src="/signalr/hubs"></script>
+        <script src="~/Scripts/twitterLive.js"></script>
+    }

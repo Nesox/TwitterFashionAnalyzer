@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.ProjectOxford.Face;
 using Microsoft.ProjectOxford.Face.Contract;
@@ -56,6 +60,14 @@ namespace FashionAnalyzer.FaceDetection
         public static bool IsFemale(this Face face)
         {
             return face != null && face.FaceAttributes.Gender == "female";
+        }
+
+        /// <summary> Gets the gender. </summary>
+        /// <param name="face"></param>
+        /// <returns></returns>
+        public static string GetGenderString(this Face face)
+        {
+            return face.FaceAttributes.Gender;
         }
     }
 }

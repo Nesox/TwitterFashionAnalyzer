@@ -80,6 +80,11 @@ namespace FashionAnalyzer.Hubs
             }
         }
 
+        private int NumTweets { get; set; }
+        private int NumFacesSeen { get; set; }
+        private int NumFemaleFacesSeen { get; set; }
+        private int NumMaleFacesSeen { get; set; }
+
         /// <summary>Stars the twitter stream, also handles stopping it.</summary>
         /// <param name="token">The cancelation token used for stopping the stream.</param>
         /// <param name="connectionId">The TwitterHub connection id.</param>
@@ -117,6 +122,9 @@ namespace FashionAnalyzer.Hubs
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>
                 {
+                    NumTweets++;
+                    TweetsPerHour = CalculatePerHourAndUpdate(NumTweets, _tweetRecords);
+
                     try
                     {
                         token.ThrowIfCancellationRequested();
@@ -132,7 +140,26 @@ namespace FashionAnalyzer.Hubs
                     foreach (ProcessedImage img in images)
                     {
                         if (img.Success.Item1)
+                        {
+                            NumFemaleFacesSeen += img.Faces.Count(f => f.IsFemale());
+                            NumMaleFacesSeen += img.Faces.Count(f => f.IsMale());
+                            NumFacesSeen += img.Faces.Length;
+
+                            FacesPerHour = CalculatePerHourAndUpdate(NumFacesSeen, _faceRecords);
+                            FemaleFacesPerHour = CalculatePerHourAndUpdate(NumFemaleFacesSeen, _femaleFacesRecords);
+                            MaleFacesPerHour = CalculatePerHourAndUpdate(NumMaleFacesSeen, _maleFacesRecords);
+
+                            string statsString =
+                                string.Format("Tweets/h: {0:F1} Faces/h: {1:F1} Male/h: {2:F1} Female/h: {3:F1}",
+                                    TweetsPerHour,
+                                    FacesPerHour,
+                                    MaleFacesPerHour,
+                                    FemaleFacesPerHour
+                                );
+
+                            await client.updateStreamStats(statsString);
                             await client.updateTweetHtml(img.GeneratedHtml);
+                        }
                     }
                 };
 
@@ -170,17 +197,30 @@ namespace FashionAnalyzer.Hubs
                 }
             }
         }
-        
+
         #region Stats
+
+        /// <summary> Number of tweets per hour. </summary>
+        public double TweetsPerHour { get; set; }
+
+        /// <summary> Number of male faces per hour. </summary>
+        public double MaleFacesPerHour { get; set; }
+
+        /// <summary> Number of female faces per hour. </summary>
+        public double FemaleFacesPerHour { get; set; }
+
+        /// <summary> Number of faces per hour.</summary>
+        public double FacesPerHour { get; set; }
 
         private static int MinutesToMs(int minutes)
         {
             return minutes * 60 * 1000;
         }
 
-        private readonly TimedRecordKeeper<long> _tweetRecords = new TimedRecordKeeper<long>(1 * 1000, 5 * 1000); // Store tweets every second for 5 seconds
-        private readonly TimedRecordKeeper<long> _maleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store make faces records every 5 seconds for 60 minutes.
-        private readonly TimedRecordKeeper<long> _femaleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store female faces records every 5 seconds for 60 minutes.
+        private readonly TimedRecordKeeper<long> _tweetRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store records every 5 seconds for 60 minutes.
+        private readonly TimedRecordKeeper<long> _maleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store records every 5 seconds for 60 minutes.
+        private readonly TimedRecordKeeper<long> _femaleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store records every 5 seconds for 60 minutes.
+        private readonly TimedRecordKeeper<long> _faceRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store records every 5 seconds for 60 minutes.
 
         private double CalculatePerHourAndUpdate(long current, TimedRecordKeeper<long> recordKeeper)
         {

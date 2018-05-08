@@ -98,17 +98,40 @@ namespace FashionAnalyzer.FaceDetection
         private static string GenerateHtml(ProcessedImage image)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<div class=\"col-sm-4 tweet-item\">");
-            sb.AppendLine(
-                $"<img src=\"{image.MediaUrl}\" class=\"img-responsive img-rounded\" style=\"max-width: 400px;\">");
+            sb.AppendLine("<div class=\"tweet-item masonry - item\">");
+            sb.AppendLine($"<img src=\"{image.MediaUrl}\" class=\"img-rounded\" style=\"max-width: 400px;\">");
 
-            foreach (Face f in image.Faces)
+            int numFaces = image.Faces.Length;
+            int femaleFaces = image.Faces.Count(f => f.IsFemale());
+            int maleFaces = image.Faces.Count(f => f.IsMale());
+
+            if (numFaces > 1)
             {
-                // Face info
-                sb.AppendFormat("<p>Age: {0}, Gender: {1}, </p>\n", f.FaceAttributes.Age, f.FaceAttributes.Gender);
-            }
-            sb.AppendLine("</div>");
+                sb.AppendFormat("<h5><span class=\"badge\">{0}</span> faces - <span class=\"badge\">{1}</span> female - <span class=\"badge\">{2}</span> male", 
+                        numFaces,
+                        femaleFaces,
+                        maleFaces
+                        );
 
+                //else if (femaleFaces != 0)
+                //{
+                //    sb.AppendFormat("<h5><span class=\"badge\">{0}</span> female face</h5>\n", numFaces);
+                //}
+                //else if (maleFaces != 0)
+                //{
+                //    sb.AppendFormat("<h5><span class=\"badge\">{0}</span> male face</h5>\n", numFaces);
+                //}
+            }
+            else
+            {
+
+                double age = image.Faces[0].FaceAttributes.Age;
+                string sex = image.Faces[0].GetGenderString();
+
+                sb.AppendFormat("<h5><span class=\"badge\">{0}</span> {1} face - Age: {2}</h5>\n", numFaces, sex, age);
+            }
+
+            sb.AppendLine("</div>");
             return sb.ToString();
         }
     }

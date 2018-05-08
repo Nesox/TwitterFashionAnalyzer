@@ -21,16 +21,6 @@ $(function () {
         twitterHub.server.stopTwitterLive(id);
     });
 
-    //$("#btnTest").on("click", function () {
-    //    var numItems = $(".tweet-item").length;
-    //    alert(numItems);
-    //    $(".tweets").removeChild();
-    //    $(".tweets").items
-    //    $(".tweets").remove(".tweet-item");
-
-    //    alert(numItems.toString());
-    //});
-
     $("body").on('DOMSubtreeModified', "#tweet-container", function () {
 
         var numItems = $(".tweet-item").length;
@@ -46,12 +36,17 @@ $(function () {
         $("#streamStatus").html(status);
     }
 
+    twitterHub.client.updateStreamStats = function (statsString) {
+        $("#streamStats").text(statsString);
+    };
+
     twitterHub.client.updateTweetHtml = function (html) {
         $(html)
             .hide()
             .prependTo(".tweets")
             .fadeIn("slow");
     };
+
 
     $.connection.hub.start();
 });
