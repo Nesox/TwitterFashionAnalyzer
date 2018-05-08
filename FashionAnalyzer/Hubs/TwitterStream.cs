@@ -109,6 +109,11 @@ namespace FashionAnalyzer.Hubs
                     return;
                 }
 
+                // The stream won't start unless there's at least one track record.
+                // Add all the hashtags we want to track.
+                foreach (string s in _trackingTags)
+                    _stream.AddTrack(s);
+
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>
                 {

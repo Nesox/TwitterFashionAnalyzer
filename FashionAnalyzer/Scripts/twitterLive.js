@@ -21,15 +21,15 @@ $(function () {
         twitterHub.server.stopTwitterLive(id);
     });
 
-    $("#btnTest").on("click", function () {
-        var numItems = $(".tweet-item").length;
-        alert(numItems);
-        $(".tweets").removeChild();
-        $(".tweets").items
-        $(".tweets").remove(".tweet-item");
+    //$("#btnTest").on("click", function () {
+    //    var numItems = $(".tweet-item").length;
+    //    alert(numItems);
+    //    $(".tweets").removeChild();
+    //    $(".tweets").items
+    //    $(".tweets").remove(".tweet-item");
 
-        alert(numItems.toString());
-    });
+    //    alert(numItems.toString());
+    //});
 
     $("body").on('DOMSubtreeModified', "#tweet-container", function () {
 
