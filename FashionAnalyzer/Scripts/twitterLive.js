@@ -21,6 +21,27 @@ $(function () {
         twitterHub.server.stopTwitterLive(id);
     });
 
+    //$("#btnTest").on("click", function () {
+    //    var numItems = $(".tweet-item").length;
+    //    alert(numItems);
+    //    $(".tweets").removeChild();
+    //    $(".tweets").items
+    //    $(".tweets").remove(".tweet-item");
+
+    //    alert(numItems.toString());
+    //});
+
+    $("body").on('DOMSubtreeModified', "#tweet-container", function () {
+
+        var numItems = $(".tweet-item").length;
+        if (numItems > 10) {
+            $('#tweet-container .tweet-item:last').fadeOut('slow',
+                function() {
+                    $(this).remove();
+                });
+        }
+    });
+
     twitterHub.client.updateStatus = function (status) {
         $("#streamStatus").html(status);
     }

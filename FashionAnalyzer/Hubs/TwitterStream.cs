@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Remoting.Channels;
 using System.Text;
@@ -21,11 +22,11 @@ using Tweetinvi.Streaming;
 
 namespace FashionAnalyzer.Hubs
 {
+    /// <summary> Main logic for the TwitterStream that fetches all the data. </summary>
     public class TwitterStream
     {
         private IFilteredStream _stream;
         //private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
-        private readonly HashSet<string> _processedImages = new HashSet<string>();
 
         #region Singleton
 
@@ -46,8 +47,8 @@ namespace FashionAnalyzer.Hubs
         {
             // Use the access token and secret from the twitter login.
             Auth.SetUserCredentials(
-                "",                                                     // Consumer Key (API Key)
-                "",                                                     // Consumer Secret (API Secret)   
+                APIKeys.TwitterConsumerKey,                             // Consumer Key (API Key)
+                APIKeys.TwitterConsumerKeySecret,                       // Consumer Secret (API Secret)   
                 twitterAuthenticatedContext.AccessToken,                // Access Token
                 twitterAuthenticatedContext.AccessTokenSecret           // Access Token Secret
             );
@@ -56,7 +57,10 @@ namespace FashionAnalyzer.Hubs
         }
 
         private readonly HashSet<string> _trackingTags = new HashSet<string>();
-
+        /// <summary> Updates the hashtags to track. </summary>
+        /// <param name="filterQuery">list of hashtags to process.</param>
+        /// <param name="connectionId">The connection if from the TwitterHub.</param>
+        /// <returns></returns>
         public async Task UpdateFilters(string filterQuery, string connectionId)
         {
             var client = _context.Clients.Client(connectionId);
@@ -76,6 +80,10 @@ namespace FashionAnalyzer.Hubs
             }
         }
 
+        /// <summary>Stars the twitter stream, also handles stopping it.</summary>
+        /// <param name="token">The cancelation token used for stopping the stream.</param>
+        /// <param name="connectionId">The TwitterHub connection id.</param>
+        /// <returns>Lé Task.</returns>
         public async Task StartStream(CancellationToken token, string connectionId)
         {
             var client = _context.Clients.Client(connectionId);
@@ -89,7 +97,13 @@ namespace FashionAnalyzer.Hubs
             {
                 _stream = Stream.CreateFilteredStream();
 
-                if (_trackingTags.Count == 0)
+                _stream.ClearTracks();
+                // The stream won't start unless there's at least one track record.
+                // Add all the hashtags we want to track.
+                foreach (string s in _trackingTags)
+                    _stream.AddTrack(s);
+
+                if (_stream.TracksCount == 0)
                 {
                     await client.updateStatus("Please add at least one tracking tag!");
                     return;
@@ -113,36 +127,13 @@ namespace FashionAnalyzer.Hubs
                         _stream.StopStream();
                     }
 
-                    //bool showTweet = false;
                     ITweet tweet = args.Tweet;
-                    if (tweet.Media != null)
+                    var images = await ProcessedImage.ProcessTweet(tweet);
+                    foreach (ProcessedImage img in images)
                     {
-                        foreach (IMediaEntity mediaEntity in tweet.Media)
-                        {
-                            if (mediaEntity.MediaType == "photo")
-                            {
-                                string mediaUrl = mediaEntity.MediaURL;
-                                if (!_processedImages.Contains(mediaUrl))
-                                {
-                                    //showTweet = true;
-                                    _processedImages.Add(mediaUrl);
-                                    Face[] faces = await FaceDetectionClient.DetectFaceAndAttributes(mediaUrl);
-
-                                    string html;
-                                    if (TryGenerateHtmlForProcessedImage(faces, mediaUrl, out html))
-                                    {
-                                        await client.updateTweetHtml(html);
-                                    }
-                                }
-                            }
-                        }
+                        if (img.Success.Item1)
+                            await client.updateTweetHtml(img.GeneratedHtml);
                     }
-
-                    //if (showTweet)
-                    //{ 
-                    //    var embedTweet = Tweet.GetOEmbedTweet(args.Tweet);
-                    //    await client.updateTweet(embedTweet);
-                    //}
                 };
 
                 // if anything changes the state, update the UI.
@@ -180,29 +171,139 @@ namespace FashionAnalyzer.Hubs
             }
         }
         
-        private bool TryGenerateHtmlForProcessedImage(Face[] faces, string mediaUrl, out string html)
+        #region Stats
+
+        private static int MinutesToMs(int minutes)
         {
-            int numFace = faces.Length;
-            if (numFace == 0)
-            {
-                html = "";
-                return false;
-
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("<div class=\"col-sm-4\">");
-            sb.AppendLine($"<img src=\"{mediaUrl}\" class=\"img-responsive img-rounded\" style=\"max-width: 400px;\">");
-
-            foreach (Face f in faces)
-            {
-                // Face info
-                sb.AppendFormat("<p>Age: {0}, Gender: {1}, </p>\n", f.FaceAttributes.Age, f.FaceAttributes.Gender);
-            }
-            sb.AppendLine("</div>");
-
-            html = sb.ToString();
-            return true;
+            return minutes * 60 * 1000;
         }
+
+        private readonly TimedRecordKeeper<long> _tweetRecords = new TimedRecordKeeper<long>(1 * 1000, 5 * 1000); // Store tweets every second for 5 seconds
+        private readonly TimedRecordKeeper<long> _maleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store make faces records every 5 seconds for 60 minutes.
+        private readonly TimedRecordKeeper<long> _femaleFacesRecords = new TimedRecordKeeper<long>(5 * 1000, MinutesToMs(60)); // Store female faces records every 5 seconds for 60 minutes.
+
+        private double CalculatePerHourAndUpdate(long current, TimedRecordKeeper<long> recordKeeper)
+        {
+            recordKeeper.AddRecord(current);
+
+            long valueAtTimeAgo;
+            TimeSpan elapsedSinceTime;
+            if (!recordKeeper.GetRecord(TimeSpan.FromMilliseconds(recordKeeper.StoreTimeMilliseconds), out valueAtTimeAgo, out elapsedSinceTime))
+                return 0;
+
+            double perHour = elapsedSinceTime.TotalHours > 0 ? (current - valueAtTimeAgo) / elapsedSinceTime.TotalHours : 0d;
+            if (perHour < 0)
+            {
+                recordKeeper.Reset();
+                return 0;
+            }
+
+            return perHour;
+        }
+
+        #region Nested type: TimedRecordKeeper
+
+        /// <summary> A class that keeps record of an entry and a time at an interval for the last X milliseconds. </summary>
+        public class TimedRecordKeeper<T>
+        {
+            // Note that we are using ints instead of TimeSpan's here to be able to divide properly.
+            public TimedRecordKeeper(int storeIntervalMilliseconds, int storeTimeMilliseconds)
+            {
+                StoreIntervalMilliseconds = storeIntervalMilliseconds;
+                StoreTimeMilliseconds = storeTimeMilliseconds;
+
+                if (NumRecords < 0)
+                    throw new ArgumentException("Invalid arguments passed!");
+
+                _records = new Record[NumRecords];
+                for (int i = 0; i < _records.Length; i++)
+                    _records[i] = new Record { Timer = new Stopwatch() };
+
+                _timer.Start();
+            }
+
+            /// <summary> Gets the interval, in milliseconds, that the record keeper stores records. </summary>
+            public int StoreIntervalMilliseconds { get; private set; }
+
+            /// <summary> Gets the amount of time the record keeper will keep records for. </summary>
+            public int StoreTimeMilliseconds { get; private set; }
+
+            /// <summary> Gets the amount of records this keeper keeps, based on the store interval and store time. </summary>
+            public int NumRecords => StoreTimeMilliseconds / StoreIntervalMilliseconds;
+
+            private readonly Stopwatch _timer = new Stopwatch();
+
+            private class Record
+            {
+                public Stopwatch Timer { get; set; }
+                public T Value { get; set; }
+            }
+
+            private readonly Record[] _records;
+
+            /// <summary> Resets this record keeper to contain zero active records. </summary>
+            public void Reset()
+            {
+                foreach (Record record in _records)
+                {
+                    record.Timer.Reset();
+                }
+            }
+
+            /// <summary> Adds a record into the time keeper. </summary>
+            /// <param name="value"></param>
+            public void AddRecord(T value)
+            {
+                long index = _timer.ElapsedMilliseconds / StoreIntervalMilliseconds;
+                index %= NumRecords;
+                _records[index].Timer.Restart();
+                _records[index].Value = value;
+            }
+
+            /// <summary> Find the record that has been stored for an amount of time closest to the passed time. </summary>
+            /// <param name="timeAgo"></param>
+            /// <param name="value"></param>
+            /// <param name="elapsed"></param>
+            /// <returns>A bool indicating whether any record was found.</returns>
+            public bool GetRecord(TimeSpan timeAgo, out T value, out TimeSpan elapsed)
+            {
+                Record bestRecord = null;
+                TimeSpan bestElapsed = TimeSpan.Zero;
+                TimeSpan bestDifference = TimeSpan.MaxValue;
+                foreach (Record record in _records)
+                {
+                    if (!record.Timer.IsRunning || record.Timer.ElapsedMilliseconds > StoreTimeMilliseconds)
+                        continue;
+
+                    TimeSpan recordElapsed = record.Timer.Elapsed;
+                    TimeSpan difference = recordElapsed - timeAgo;
+                    if (difference < TimeSpan.Zero)
+                        difference = -difference;
+
+                    if (difference < bestDifference)
+                    {
+                        bestDifference = difference;
+                        bestRecord = record;
+                        bestElapsed = recordElapsed;
+                    }
+                }
+
+                if (bestRecord == null)
+                {
+                    value = default(T);
+                    elapsed = TimeSpan.Zero;
+                    return false;
+                }
+
+                value = bestRecord.Value;
+                elapsed = bestElapsed;
+                return true;
+            }
+        }
+
+        #endregion
+
+        #endregion
     }
 }
  
