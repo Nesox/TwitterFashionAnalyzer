@@ -1,19 +1,30 @@
 $(function () {
-
     var twitterHub = $.connection.twitterHub;
+
+    // Function defintions
     twitterHub.client.setTaskId = function (id) {
         $("#stopStream").attr("data-id", id);
     }
 
-    $("#btnUpdateFilter").on("click",
-        function() {
-            var filter = $('#inpHashtagFilter').val();
-            alert(filter);
-            twitterHub.server.updateFilters(filter);
-        });
-    
+    twitterHub.client.updateStatus = function (status) {
+        $("#streamStatus").html(status);
+    }
+
+    twitterHub.client.updateStreamStats = function (statsString) {
+        $("#streamStats").text(statsString);
+    };
+
+    twitterHub.client.updateTweetHtml = function (html) {
+        $(html)
+            .hide()
+            .prependTo(".tweets")
+            .fadeIn("slow");
+    };
+
+    // Click handlers
     $("#startStream").on("click", function () {
-        twitterHub.server.startTwitterLive();
+        var filter = $('#inpHashtagFilter').val();
+        twitterHub.server.startTwitterLive(filter);
     });
 
     $("#stopStream").on("click", function () {
@@ -21,16 +32,7 @@ $(function () {
         twitterHub.server.stopTwitterLive(id);
     });
 
-    //$("#btnTest").on("click", function () {
-    //    var numItems = $(".tweet-item").length;
-    //    alert(numItems);
-    //    $(".tweets").removeChild();
-    //    $(".tweets").items
-    //    $(".tweets").remove(".tweet-item");
-
-    //    alert(numItems.toString());
-    //});
-
+    // Other events
     $("body").on('DOMSubtreeModified', "#tweet-container", function () {
 
         var numItems = $(".tweet-item").length;
@@ -42,16 +44,36 @@ $(function () {
         }
     });
 
-    twitterHub.client.updateStatus = function (status) {
-        $("#streamStatus").html(status);
-    }
+    /*
+    // Changing filters on the fly. todo: not working yet :/
+    var typingTimer;
+    var doneTypingInterval = 5000; //time in ms, 5 second for example
+    var $input = $('#inpHashtagFilter');
 
-    twitterHub.client.updateTweetHtml = function (html) {
-        $(html)
-            .hide()
-            .prependTo(".tweets")
-            .fadeIn("slow");
-    };
+    // on keyup, start the countdown.
+    $input.on('keyup',
+        function() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(doneTyping, doneTypingInterval);
+        });
+
+    //on keydown, clear the countdown 
+    $input.on('keydown',
+        function() {
+            clearTimeout(typingTimer);
+        });
+
+    //user is "finished typing," do something
+    function doneTyping() {
+        var filter = $('#inpHashtagFilter').val();
+
+        // Stop the stream first.
+        var id = $(this).attr("data-id");
+        twitterHub.server.stopTwitterLive(id);
+
+        // restart the stream.
+        twitterHub.startTwitterLive(filter);
+    }*/
 
     $.connection.hub.start();
 });

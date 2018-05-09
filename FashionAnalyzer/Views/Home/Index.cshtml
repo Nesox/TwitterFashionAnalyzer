@@ -5,18 +5,22 @@
 
 <div class="jumbotron">
     <h1>Twitter Fashion Analyzer</h1>
-    <p class="lead">Twitter Fashion Analyzer is an online tool for listening to tweets with specific hashtags, once a tweet has been made if it contains a picture it's passed to Azure's Face Api to determine if there is and how many faces there are in a picture and the age and gender.</p>
+    <p class="lead">Twitter Fashion Analyzer is an online tool for listening to tweets with specific hashtags, once a tweet is found it's parsed for images then the images gets checked for faces, the image is then shown with the amount of faces and what gender they have.</p>
 </div>
 
 <div class="form-group">
     <label>Hashtag filter:</label>
     <input id="inpHashtagFilter" type="text" class="form-control">
-    <button id="btnUpdateFilter" type="button" class="btn btn-primary btn-md">Update</button>
-    @*<button id="btnTest" type="button" class="btn btn-primary btn-md">Test</button>*@
-
 </div>
 
-<span id="streamStatus" class="label label-success"></span>
+<div class="container">
+    <dl>
+        <dt>Status</dt>
+        <dd id="streamStatus"></dd>
+        <dt>Stats</dt>
+        <dd id="streamStats"></dd>
+    </dl>
+</div>
 
 <div class="btn-group">
     <button id="startStream" class="btn btn-success">
@@ -26,19 +30,17 @@
         <span class="glyphicon glyphicon-stop"></span> Stop Stream
     </button>
 </div>
-
-<div class="container-fluid">
-    <div id="tweet-container" class="row tweets">
-
-    </div>
+<br />
+<!-- Container for all the processed images -->
+<div id="tweet-container" class="row tweets">
 </div>
+
 
 @section scripts
 {
-    <script src="~/Scripts/jquery-1.10.2.min.js"></script>
-    <script src="~/Scripts/jquery.signalR-2.2.3.min.js"></script>
-    <script src="~/Scripts/bootstrap.min.js"></script>
-    <script src="/signalr/hubs"></script>
-    <script src="~/Scripts/twitterLive.js"></script>
-}
-
+        <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+        <script src="~/Scripts/jquery.signalR-2.2.3.min.js"></script>
+        <script src="~/Scripts/bootstrap.min.js"></script>
+        <script src="/signalr/hubs"></script>
+        <script src="~/Scripts/twitterLive.js"></script>
+    }
