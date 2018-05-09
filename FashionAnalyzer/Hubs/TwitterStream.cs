@@ -26,13 +26,13 @@ namespace FashionAnalyzer.Hubs
     public class TwitterStream
     {
         private IFilteredStream _stream;
-        //private readonly IHubContext _context = GlobalHost.ConnectionManager.GetHubContext<TwitterHub>();
 
         #region Singleton
 
         private static readonly Lazy<TwitterStream> _instance = new Lazy<TwitterStream>(
         () => new TwitterStream(GlobalHost.ConnectionManager.GetHubContext<TwitterHub>()));
 
+        /// <summary> Instance of TwitterStream. </summary>
         public static TwitterStream Instance => _instance.Value;
 
         #endregion
@@ -56,30 +56,6 @@ namespace FashionAnalyzer.Hubs
             return Task.FromResult(0);
         }
 
-        private readonly HashSet<string> _trackingTags = new HashSet<string>();
-        /// <summary> Updates the hashtags to track. </summary>
-        /// <param name="filterQuery">list of hashtags to process.</param>
-        /// <param name="connectionId">The connection if from the TwitterHub.</param>
-        /// <returns></returns>
-        public async Task UpdateFilters(string filterQuery, string connectionId)
-        {
-            var client = _context.Clients.Client(connectionId);
-            
-            string[] filters = filterQuery.Split('#');
-            if (filters.Length == 0)
-            {
-                await client.UpdateStatus("Invalid filter!");
-                return;
-            }
-            
-            _trackingTags.Clear();
-            foreach (string s in filters)
-            {
-                if (!string.IsNullOrWhiteSpace(s))
-                    _trackingTags.Add($"#{s}");
-            }
-        }
-
         private int NumTweets { get; set; }
         private int NumFacesSeen { get; set; }
         private int NumFemaleFacesSeen { get; set; }
@@ -89,7 +65,7 @@ namespace FashionAnalyzer.Hubs
         /// <param name="token">The cancelation token used for stopping the stream.</param>
         /// <param name="connectionId">The TwitterHub connection id.</param>
         /// <returns>Lé Task.</returns>
-        public async Task StartStream(CancellationToken token, string connectionId)
+        public async Task StartStream(CancellationToken token, string connectionId, string trackingFilter)
         {
             var client = _context.Clients.Client(connectionId);
             if (Auth.Credentials == null)
@@ -102,22 +78,27 @@ namespace FashionAnalyzer.Hubs
             {
                 _stream = Stream.CreateFilteredStream();
 
-                _stream.ClearTracks();
-                // The stream won't start unless there's at least one track record.
-                // Add all the hashtags we want to track.
-                foreach (string s in _trackingTags)
-                    _stream.AddTrack(s);
+                // setup the tracking.
+                // remove all the whitepsaces first, no idea why it's throwing exceptions unless we do this...
+                trackingFilter = trackingFilter.Replace(" ", "");
+                string[] filters = trackingFilter.Split('#');
+                if (filters.Length == 0)
+                {
+                    await client.UpdateStatus("Invalid filter!");
+                    return;
+                }
+
+                foreach (string s in filters)
+                {
+                    if (!string.IsNullOrWhiteSpace(s))
+                        _stream.AddTrack($"#{s}");
+                }
 
                 if (_stream.TracksCount == 0)
                 {
                     await client.updateStatus("Please add at least one tracking tag!");
                     return;
                 }
-
-                // The stream won't start unless there's at least one track record.
-                // Add all the hashtags we want to track.
-                foreach (string s in _trackingTags)
-                    _stream.AddTrack(s);
 
                 // Raised when any tweet that matches any condition.
                 _stream.MatchingTweetReceived += async (sender, args) =>
@@ -132,7 +113,8 @@ namespace FashionAnalyzer.Hubs
                     catch (OperationCanceledException)
                     {
                         await client.updateStatus("Stopped");
-                        _stream.StopStream();
+                        _stream?.StopStream();
+                        _stream = null;
                     }
 
                     ITweet tweet = args.Tweet;
@@ -191,8 +173,11 @@ namespace FashionAnalyzer.Hubs
                     case StreamState.Pause:
                         _stream.ResumeStream();
                         break;
+                    case StreamState.Running:
                     case StreamState.Stop:
-                        await _stream.StartStreamMatchingAnyConditionAsync();
+                        _stream = null;
+                        if (!token.IsCancellationRequested)
+                            await StartStream(token, connectionId, trackingFilter);
                         break;
                 }
             }

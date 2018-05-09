@@ -66,15 +66,17 @@ namespace FashionAnalyzer.FaceDetection
                             try
                             {
                                 var faces = await FaceDetectionClient.DetectFaceAndAttributes(mediaUrl);
-                                if (faces.Length == 0)
+                                if (faces != null && faces.Length == 0)
                                     continue;
 
                                 pi.Faces = faces;
                                 pi.GeneratedHtml = GenerateHtml(pi);
                             }
+                            // happens if we get rate limited.
                             catch (FaceAPIException e)
                             {
                                 pi.Success = new Tuple<bool, string>(false, e.ErrorMessage);
+                                continue;
                             }
 
                             if (_processedImages.TryAdd(mediaUrl, pi))
@@ -112,19 +114,9 @@ namespace FashionAnalyzer.FaceDetection
                         femaleFaces,
                         maleFaces
                         );
-
-                //else if (femaleFaces != 0)
-                //{
-                //    sb.AppendFormat("<h5><span class=\"badge\">{0}</span> female face</h5>\n", numFaces);
-                //}
-                //else if (maleFaces != 0)
-                //{
-                //    sb.AppendFormat("<h5><span class=\"badge\">{0}</span> male face</h5>\n", numFaces);
-                //}
             }
             else
             {
-
                 double age = image.Faces[0].FaceAttributes.Age;
                 string sex = image.Faces[0].GetGenderString();
 
